@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Đăng nhập / Đăng ký</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #2a1287;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: #fff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      width: 360px;
+      text-align: center;
+    }
+    h2 {
+      margin-bottom: 20px;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(to right, #f00, #c00);
+      color: white;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: linear-gradient(to right, #c00, #900);
+    }
+    .switch {
+      margin-top: 15px;
+      font-size: 14px;
+    }
+    .switch a {
+      color: #007bff;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .switch a:hover {
+      text-decoration: underline;
+    }
+    .message {
+      margin-top: 12px;
+      font-size: 14px;
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2 id="form-title">Đăng nhập</h2>
+
+    <input type="email" id="email" placeholder="Email" required>
+    <input type="password" id="password" placeholder="Mật khẩu" required>
+
+    <div id="extra-fields" style="display:none;">
+      <input type="text" id="fullname" placeholder="Họ và tên" required>
+    </div>
+
+    <button id="submitBtn">Đăng nhập</button>
+    <div class="switch">
+      Chưa có tài khoản? <a id="toggleLink">Đăng ký ngay</a>
+    </div>
+    <div class="message" id="message"></div>
+  </div>
+<script>
+  const API_URL = "http://localhost:5000/api/auth";
+
+  let isLogin = true;
+  const formTitle = document.getElementById("form-title");
+  const submitBtn = document.getElementById("submitBtn");
+  const toggleLink = document.getElementById("toggleLink");
+  const extraFields = document.getElementById("extra-fields");
+  const messageBox = document.getElementById("message");
+
+  // Chuyển đổi giữa login <-> register
+  toggleLink.addEventListener("click", () => {
+    isLogin = !isLogin;
+    if (isLogin) {
+      formTitle.innerText = "Đăng nhập";
+      submitBtn.innerText = "Đăng nhập";
+      toggleLink.innerText = "Đăng ký ngay";
+      extraFields.style.display = "none";
+    } else {
+      formTitle.innerText = "Đăng ký";
+      submitBtn.innerText = "Đăng ký";
+      toggleLink.innerText = "Đăng nhập ngay";
+      extraFields.style.display = "block";
+    }
+    messageBox.innerText = "";
+  });
+
+  // Xử lý submit
+  submitBtn.addEventListener("click", async () => {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const fullname = document.getElementById("fullname").value.trim();
+
+    if (!email || !password || (!isLogin && !fullname)) {
+      messageBox.style.color = "red";
+      messageBox.innerText = "Vui lòng điền đầy đủ thông tin!";
+      return;
+    }
+
+    try {
+      let endpoint = isLogin ? "login" : "register";
+      let body = isLogin
+        ? { email, password }
+        : { email, password, fullname };
+
+      const res = await fetch(`${API_URL}/${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        if (isLogin) {
+          // 👉 Nếu login thành công
+          localStorage.setItem("token", data.token);
+          messageBox.style.color = "green";
+          messageBox.innerText = "Đăng nhập thành công! Đang chuyển hướng...";
+          setTimeout(() => {
+            window.location.href = "notes.html"; // Chuyển sang trang ghi chú
+          }, 1000);
+        } else {
+          // 👉 Nếu register thành công
+          messageBox.style.color = "green";
+          messageBox.innerText = "Đăng ký thành công! Vui lòng đăng nhập.";
+          // Tự động chuyển về form login
+          setTimeout(() => {
+            isLogin = true;
+            formTitle.innerText = "Đăng nhập";
+            submitBtn.innerText = "Đăng nhập";
+            toggleLink.innerText = "Đăng ký ngay";
+            extraFields.style.display = "none";
+            messageBox.innerText = "";
+          }, 1500);
+        }
+      } else {
+        messageBox.style.color = "red";
+        messageBox.innerText = data.message || "Có lỗi xảy ra!";
+      }
+    } catch (err) {
+      messageBox.style.color = "red";
+      messageBox.innerText = "Không kết nối được server!";
+    }
+  });
+</script>
+</body>
+</html>

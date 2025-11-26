@@ -1,0 +1,112 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingVertical="4dp"
+    android:paddingHorizontal="0dp">
+
+    <!-- Hàng chứa ảnh/video + nút xóa + tên file -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <!-- 🔲 Ảnh / Video vẫn giữ hình vuông -->
+        <FrameLayout
+            android:id="@+id/previewFrame"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_margin="1dp"
+            android:background="@drawable/attachment_background">
+
+            <ImageView
+                android:id="@+id/previewImage"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:visibility="gone"
+                android:contentDescription="Ảnh hoặc video đính kèm" />
+
+            <ImageView
+                android:id="@+id/previewVideoIcon"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_gravity="center"
+                android:src="@android:drawable/ic_media_play"
+                app:tint="@android:color/white"
+                android:visibility="gone"
+                android:contentDescription="Biểu tượng video" />
+        </FrameLayout>
+
+        <!-- 🧾 Tên file -->
+        <TextView
+            android:id="@+id/txtFileName"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="Tên tệp"
+            android:textSize="13sp"
+            android:visibility="gone"
+            android:paddingStart="8dp"
+            android:ellipsize="end"
+            android:singleLine="true" />
+
+        <!-- 🗑️ Nút xóa -->
+        <ImageButton
+            android:id="@+id/btnRemove"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@android:drawable/ic_delete"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="@android:color/darker_gray" />
+    </LinearLayout>
+
+    <!-- 🎵 Audio: nằm dưới, hiển thị thanh ngang thật -->
+    <LinearLayout
+        android:id="@+id/audioLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/audio_bar_bg"
+        android:padding="8dp"
+        android:visibility="gone"
+        android:layout_marginTop="6dp"
+        android:layout_marginHorizontal="4dp"
+        android:minHeight="48dp">
+
+        <!-- Nút Play -->
+        <ImageButton
+            android:id="@+id/btnPlayAudio"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/round_button_bg"
+            android:src="@android:drawable/ic_media_play"
+            android:padding="6dp"
+            app:tint="@android:color/white"
+            android:contentDescription="Phát âm thanh" />
+
+        <!-- Thanh SeekBar -->
+        <SeekBar
+            android:id="@+id/audioSeekBar"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="8dp"
+            android:progressTint="@android:color/white"
+            android:thumbTint="@android:color/white" />
+
+        <!-- Thời gian -->
+        <TextView
+            android:id="@+id/txtAudioTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="00:00 / 00:00"
+            android:textSize="12sp"
+            android:textColor="@android:color/white"
+            android:paddingEnd="4dp" />
+    </LinearLayout>
+
+</LinearLayout>

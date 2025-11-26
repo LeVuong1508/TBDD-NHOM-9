@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_item"
+    android:elevation="2dp">
+
+    <!-- Tiêu đề ghi chú -->
+    <TextView
+        android:id="@+id/tvNoteTitle"
+        android:text="Tiêu đề ghi chú"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/black"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+
+    <!-- Người gửi -->
+    <TextView
+        android:id="@+id/tvFrom"
+        android:text="Từ: user@example.com"
+        android:textSize="14sp"
+        android:textColor="@android:color/darker_gray"
+        android:layout_marginTop="4dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+
+    <!-- Nút Đồng ý / Từ chối -->
+    <LinearLayout
+        android:orientation="horizontal"
+        android:gravity="end"
+        android:layout_marginTop="12dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <Button
+            android:id="@+id/btnReject"
+            android:text="Từ chối"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:backgroundTint="@android:color/holo_red_dark"
+            android:textColor="@android:color/white"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"/>
+
+        <Button
+            android:id="@+id/btnAccept"
+            android:text="Đồng ý"
+            android:layout_marginStart="12dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:backgroundTint="@android:color/holo_green_light"
+            android:textColor="@android:color/white"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"/>
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,168 @@
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black">
+
+    <!-- Thanh trên cùng -->
+    <LinearLayout
+        android:id="@+id/header"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageButton
+            android:id="@+id/btnBack"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_arrow_back"
+            android:contentDescription="@string/desc_back_note"
+            app:tint="@color/white" />
+
+        <TextView
+            android:id="@+id/tvTitleHeader"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/btn_add_new_note"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btnImportant"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_pin_off"
+            android:contentDescription="Quan trọng"
+            app:tint="@color/white" />
+    </LinearLayout>
+
+    <!-- ScrollView chứa nội dung -->
+    <ScrollView
+        android:id="@+id/scrollContent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        app:layout_constraintTop_toBottomOf="@id/header"
+        app:layout_constraintBottom_toTopOf="@id/fabSaveNote"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvAttachments"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:padding="4dp" />
+
+            <EditText
+                android:id="@+id/edtTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/hint_title"
+                android:textColor="@color/white"
+                android:textColorHint="#AAAAAA"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:background="@null"
+                android:layout_marginTop="16dp"/>
+
+            <EditText
+                android:id="@+id/edtContent"
+                android:layout_width="match_parent"
+                android:layout_height="92dp"
+                android:layout_marginTop="10dp"
+                android:background="@null"
+                android:hint="@string/hint_note_content"
+                android:inputType="textMultiLine"
+                android:textColor="@color/white"
+                android:textColorHint="#AAAAAA"
+                android:textSize="16sp" />
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Nút lưu -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabSaveNote"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:src="@drawable/ic_check"
+        app:backgroundTint="@color/teal_700"
+        app:tint="@color/white"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Nút thêm chính -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabMain"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="16dp"
+        android:src="@drawable/ic_add"
+        app:backgroundTint="@color/purple_500"
+        app:tint="@color/white"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"/>
+
+    <!-- FAB con: Chọn file -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabFile"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="80dp"
+        android:src="@drawable/ic_file"
+        android:visibility="gone"
+        app:backgroundTint="@color/teal_700"
+        app:tint="@color/white"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- FAB con: Ghi âm -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabRecord"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="140dp"
+        android:src="@drawable/ic_mic"
+        android:visibility="gone"
+        app:backgroundTint="@color/teal_700"
+        app:tint="@color/white"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- FAB con: Vẽ -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabDraw"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="200dp"
+        android:src="@drawable/ic_brush"
+        android:visibility="gone"
+        app:backgroundTint="@color/teal_700"
+        app:tint="@color/white"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>📒 Quản lý ghi chú</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/share.css">
+
+  <!-- Day.js -->
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/utc.js"></script>
+  <script>
+    dayjs.extend(dayjs_plugin_utc);
+  </script>
+</head>
+<body>
+  <h2>📒 Quản lý ghi chú</h2>
+  <button id="logoutBtn">Đăng xuất</button>
+
+  <!-- Form thêm/sửa ghi chú -->
+  <form id="note-form">
+    <input type="hidden" id="noteId">
+    <input type="text" id="title" placeholder="Tiêu đề" required>
+    <textarea id="content" rows="4" placeholder="Nội dung" required></textarea>
+    <!-- Hàng nút thao tác -->
+<div class="action-buttons">
+  <!-- Chọn file -->
+  <div class="file-upload-wrapper">
+  <input type="file" id="fileUpload" accept="image/*,video/*,audio/*" multiple>
+  <label for="fileUpload" class="file-upload-btn">📎 Chọn file</label>
+  </div>
+
+  <!-- Ghi âm -->
+  <button type="button" id="startRecordBtn">🎤 Ghi âm</button>
+  <button type="button" id="stopRecordBtn" disabled>⏹ Dừng</button>
+
+  <!-- Bản vẽ -->
+  <button type="button" id="toggleDrawBtn">✏️ Bản vẽ</button>
+</div>
+
+<!-- Preview file -->
+<div id="filePreview" class="file-preview"></div>
+
+<!-- Audio preview -->
+<audio id="voicePreview" controls style="display:none;"></audio>
+
+<!-- Vùng vẽ -->
+<div id="drawAreaWrapper" style="display:none; margin-top:10px;">
+  <canvas id="drawCanvas" width="600" height="400" style="border:1px solid #ccc; cursor:crosshair;"></canvas>
+  <br>
+  <button type="button" id="clearDrawBtn">🧹 Xóa</button>
+</div>
+
+    <!-- Đánh dấu quan trọng -->
+    <div class="important-box">
+      <label class="switch">
+        <input type="checkbox" id="important">
+        <span class="slider"></span>
+      </label>
+      <span class="important-label">⭐ Quan trọng</span>
+    </div>
+
+    <button type="button" id="submitBtn" class="add-btn">Thêm ghi chú</button>
+  </form>
+  
+  <!-- Tìm kiếm -->
+  <input type="text" id="search" placeholder="Tìm kiếm ghi chú...">
+  <button onclick="searchNotes()">🔍 Tìm</button>
+  <button id="btnViewShares">📩 Xem ghi chú được chia sẻ</button>
+  <div id="shareList"></div>
+
+  <div id="notes"></div>
+
+  <!-- Modal chi tiết -->
+  <div id="detailModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeModal()">&times;</span>
+      <h3 id="detailTitle"></h3>
+      <p id="detailContent"></p>
+      <div class="file-preview" id="detailFile"></div>
+      <p><b>⭐ Quan trọng:</b> <span id="detailImportant"></span></p>
+      <p>🕒 <b>Tạo lúc:</b> <span id="detailCreated"></span></p>
+      <p>🔄 <b>Cập nhật:</b> <span id="detailUpdated"></span></p>
+
+       <!-- Action bar đặt nút -->
+    <div id="detailActions" style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+      <button id="toggleDeleteBtn">🗑️ Chế độ xóa file</button>
+      <button id="confirmDeleteBtn" style="display:none;"> Xóa file đã chọn</button>
+      <button id="exitDeleteBtn" style="display:none;"> Thoát chế độ xóa</button>
+    </div>
+    </div>
+  </div>
+
+<!-- SHARE -->
+<div id="overlay" style="display:none;"></div>
+
+<div id="sharePopup" style="display:none;">
+  <h3>Chia sẻ ghi chú</h3>
+  <input type="text" id="shareEmail" placeholder="Nhập email người nhận">
+  <div id="recentEmails"></div>
+  <button id="sendShareBtn">Gửi</button>
+  <button id="cancelShareBtn">Hủy</button>
+</div>
+
+  <!-- Overlay xem ảnh lớn -->
+  <div id="imageOverlay">
+    <span onclick="closeImageOverlay()">&times;</span>
+    <img id="overlayImg" src="">
+  </div>
+
+<script>
+const API_URL = "http://localhost:5000/api";
+const token = localStorage.getItem("token");
+if (!token) window.location.href = "login.html";
+
+let editingNoteId = null;
+
+// Format thời gian (UTC -> VN)
+function formatDate(value) {
+  return value
+    ? dayjs.utc(value).format("DD-MM-YYYY HH:mm:ss")
+    : "Chưa cập nhật";
+}
+
+// Lấy danh sách notes
+async function getNotes() {
+  const res = await fetch(`${API_URL}/notes`, {
+    headers:{ "Authorization":"Bearer "+token }
+  });
+  return res.json();
+}
+
+// Render danh sách note
+function renderNotes(notes){
+  const notesContainer = document.getElementById("notes");
+  notesContainer.innerHTML = "";
+  if(!Array.isArray(notes)) return;
+
+  notes.forEach(note=>{
+    const div=document.createElement("div");
+    div.className="note";
+
+    let fileHtml="";
+    if(note.attachments?.length){
+      fileHtml = note.attachments.map(att=>{
+        if(att.fileType==='image') 
+          return `<img src="${att.filePath}" style="max-width:150px; display:block; margin-top:8px;">`;
+        if(att.fileType==='video') 
+          return `<video controls style="max-width:200px; display:block; margin-top:8px;"><source src="${att.filePath}" type="video/mp4"></video>`;
+        if(att.fileType==='audio') 
+          return `<audio controls style="display:block; margin-top:8px;"><source src="${att.filePath}" type="audio/mpeg"></audio>`;
+        return `<a href="${att.filePath}" target="_blank">📂 ${att.fileName || "Tệp đính kèm"}</a>`;
+      }).join("");
+    }
+
+    div.innerHTML = `
+      <h3>${note.title}</h3>
+      <p>${note.content?.length>50?note.content.substring(0,50)+"...":(note.content||"")}</p>
+      ${fileHtml}
+      <small>🕒 ${formatDate(note.createdAt)}</small><br>
+      <small>⭐ ${note.important?"Quan trọng":"Bình thường"}</small>
+      <div class="actions">
+        <button onclick="viewDetail(${note.id})">👁️ Xem</button>
+        <button onclick="editNote(${note.id})">✏️ Sửa</button>
+        <button onclick="deleteNote(${note.id})">🗑️ Xóa</button>
+        <button onclick="toggleImportant(${note.id})">⭐ Toggle</button>
+        <button onclick="shareNoteUI(${note.id})">🔗 Chia sẻ</button>
+      </div>
+    `;
+    notesContainer.appendChild(div);
+  });
+}
+
+async function loadNotes(){ renderNotes(await getNotes()); }
+
+// Preview file
+document.getElementById('fileUpload').addEventListener('change', e=>{
+  const preview=document.getElementById('filePreview');
+  preview.innerHTML="";
+  Array.from(e.target.files).forEach(file=>{
+    const url=URL.createObjectURL(file);
+    let elem;
+    if(file.type.startsWith('image/')) 
+      elem=`<img src="${url}" style="max-width:150px;margin:5px;">`;
+    else if(file.type.startsWith('video/')) 
+      elem=`<video src="${url}" controls style="max-width:200px;margin:5px;"></video>`;
+    else if(file.type.startsWith('audio/')) 
+      elem=`<audio src="${url}" controls style="display:block;margin:5px;"></audio>`;
+    else 
+      elem=`<span>📂 ${file.name}</span>`;
+    preview.innerHTML+=elem;
+  });
+});
+
+function resetForm(clearFiles = true) {
+  // Reset text field
+  document.getElementById("title").value = "";
+  document.getElementById("content").value = "";
+  document.getElementById("important").checked = false;
+  document.getElementById("noteId").value = "";
+
+  // Reset file + preview (chỉ khi thêm mới, không phải sửa)
+  if (clearFiles) {
+    document.getElementById("fileUpload").value = "";
+    document.getElementById("filePreview").innerHTML = "";
+    document.getElementById("voicePreview").src = "";
+    document.getElementById("voicePreview").style.display = "none";
+  }
+
+  // Reset canvas (nếu có bản vẽ)
+  if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Reset lại nút
+  const submitBtn = document.getElementById("submitBtn");
+  submitBtn.innerText = "Thêm ghi chú";
+  submitBtn.className = "add-btn";
+}
+
+// Thêm/sửa note
+document.getElementById("submitBtn").addEventListener("click", async () => {
+  const id = document.getElementById("noteId").value;
+  const title = document.getElementById("title").value.trim();
+  const content = document.getElementById("content").value.trim();
+  const important = document.getElementById("important").checked;
+  const files = document.getElementById("fileUpload").files;
+
+  if (!title || !content) return alert("Vui lòng nhập tiêu đề và nội dung!");
+
+  const url = id ? `${API_URL}/notes/edit/${id}` : `${API_URL}/notes/add`;
+  const method = id ? "PUT" : "POST";
+
+  try {
+    // Lưu note cơ bản
+    const res = await fetch(url, {
+      method,
+      headers: {
+        "Authorization": "Bearer " + token,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ title, content, important })
+    });
+
+    const note = await res.json();
+    if (!res.ok || !note.id) return alert(note.message || "Lỗi lưu ghi chú");
+
+    // Chuẩn bị upload file
+    const formData = new FormData();
+    Array.from(files).forEach(f => formData.append("files", f));
+
+    // Nếu có bản vẽ thì thêm
+    if (canvas && ctx) {
+      const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      const isEmpty = [...pixels].every(ch => ch === 0);
+      if (!isEmpty) {
+        await new Promise(resolve => {
+          canvas.toBlob(blob => {
+            if (blob) {
+              formData.append("files", new File([blob], `drawing_${Date.now()}.png`, { type: "image/png" }));
+            }
+            resolve();
+          }, "image/png");
+        });
+      }
+    }
+
+    // Upload file nếu có
+    if (formData.has("files")) {
+      await fetch(`${API_URL}/notes/upload/${note.id}/multiple`, {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + token },
+        body: formData
+      });
+    }
+
+    alert(id ? "Cập nhật thành công" : "Thêm thành công");
+    resetForm(true);
+    
+    loadNotes();
+  } catch (err) {
+    console.error(err);
+    alert("Lỗi kết nối tới server");
+  }
+});
+
+
+// Chỉnh sửa
+function editNote(id){
+  getNotes().then(notes=>{
+    const n=notes.find(x=>x.id===id);
+    if(!n) return;
+    document.getElementById("noteId").value=n.id;
+    document.getElementById("title").value=n.title;
+    document.getElementById("content").value=n.content;
+    document.getElementById("important").checked=n.important;
+    document.getElementById("submitBtn").innerText="Cập nhật ghi chú";
+    document.getElementById("submitBtn").className="update-btn";
+  });
+}
+
+// Xóa
+async function deleteNote(id){
+  if(!confirm("Xóa ghi chú này?")) return;
+  try{
+    const res=await fetch(`${API_URL}/notes/delete/${id}`,{
+      method:"DELETE",
+      headers:{ "Authorization":"Bearer "+token }
+    });
+    if(!res.ok) return alert("Xóa thất bại");
+    alert("Xóa thành công");
+    loadNotes();
+  }catch(err){
+    console.error(err);
+    alert("Lỗi kết nối tới server");
+  }
+}
+
+// Toggle important
+async function toggleImportant(id){
+  try{
+    const res=await fetch(`${API_URL}/notes/important/${id}`,{
+      method:"PUT",
+      headers:{ "Authorization":"Bearer "+token }
+    });
+    if(!res.ok) return alert("Không thể cập nhật trạng thái quan trọng");
+    loadNotes();
+  }catch(err){
+    console.error(err);
+    alert("Lỗi kết nối tới server");
+  }
+}
+
+async function viewDetail(id) {
+  try {
+    const res = await fetch(`${API_URL}/notes/${id}`, { 
+      headers: { "Authorization": "Bearer " + token } 
+    });
+    if (!res.ok) return alert("Không thể lấy ghi chú");
+    const n = await res.json();
+
+    // Set text info
+    document.getElementById("detailTitle").innerText = n.title || "";
+    document.getElementById("detailContent").innerText = n.content || "";
+    document.getElementById("detailImportant").innerText = n.important ? "✔️" : "❌";
+    document.getElementById("detailCreated").innerText = formatDate(n.createdAt);
+    document.getElementById("detailUpdated").innerText = formatDate(n.updatedAt);
+
+    // Lấy vùng hiển thị file
+    const f = document.getElementById("detailFile");
+    f.innerHTML = "";
+    f.style.maxHeight = "300px";
+    f.style.overflowY = "auto";
+
+    // Lấy các nút hành động (đã có sẵn trong HTML)
+    const toggleBtn = document.getElementById("toggleDeleteBtn");
+    const delBtn    = document.getElementById("confirmDeleteBtn");
+    const exitBtn   = document.getElementById("exitDeleteBtn");
+
+    // Reset trạng thái nút mỗi lần mở modal
+    toggleBtn.style.display = "inline-block";
+    delBtn.style.display    = "none";
+    exitBtn.style.display   = "none";
+
+    if (Array.isArray(n.attachments) && n.attachments.length > 0) {
+      // Tạo danh sách file
+      const fileList = document.createElement("div");
+
+      n.attachments.forEach(att => {
+        const wrapper = document.createElement("div");
+        wrapper.style.display = "flex";
+        wrapper.style.alignItems = "center";
+        wrapper.style.gap = "10px";
+        wrapper.style.marginBottom = "8px";
+
+        // Checkbox ẩn mặc định
+        const chk = document.createElement("input");
+        chk.type = "checkbox";
+        chk.value = att.filePath.split("/").pop();
+        chk.style.display = "none";
+
+        let elem;
+        if (att.fileType === "image") {
+          elem = document.createElement("img");
+          elem.src = att.filePath;
+          elem.style.maxWidth = "auto";
+          elem.style.cursor = "pointer";
+          elem.onclick = () => {
+            document.getElementById("overlayImg").src = att.filePath;
+            document.getElementById("imageOverlay").style.display = "flex";
+          };
+        } else if (att.fileType === "video") {
+          elem = document.createElement("video");
+          elem.controls = true;
+          elem.style.maxWidth = "auto";
+          elem.innerHTML = `<source src="${att.filePath}" type="video/mp4">`;
+        } else if (att.fileType === "audio") {
+          elem = document.createElement("audio");
+          elem.controls = true;
+          elem.style.width = "100%";
+          elem.innerHTML = `<source src="${att.filePath}" type="audio/mpeg">`;
+        } else {
+          elem = document.createElement("a");
+          elem.href = att.filePath;
+          elem.target = "_blank";
+          elem.innerText = "📂 " + (att.fileName || "Tệp đính kèm");
+        }
+
+        wrapper.appendChild(chk);
+        wrapper.appendChild(elem);
+        fileList.appendChild(wrapper);
+      });
+
+      f.appendChild(fileList);
+
+      // Sự kiện: bật chế độ xóa
+      toggleBtn.onclick = () => {
+        toggleBtn.style.display = "none";
+        delBtn.style.display = "inline-block";
+        exitBtn.style.display = "inline-block";
+        f.querySelectorAll("input[type=checkbox]").forEach(chk => {
+          chk.style.display = "inline-block";
+        });
+      };
+
+      // Sự kiện: thoát chế độ xóa
+      exitBtn.onclick = () => {
+        toggleBtn.style.display = "inline-block";
+        delBtn.style.display = "none";
+        exitBtn.style.display = "none";
+        f.querySelectorAll("input[type=checkbox]").forEach(chk => {
+          chk.checked = false;
+          chk.style.display = "none";
+        });
+      };
+
+      // Sự kiện: xóa file đã chọn
+      delBtn.onclick = async () => {
+        const selected = Array.from(f.querySelectorAll("input[type=checkbox]:checked"))
+                              .map(chk => chk.value);
+        if (selected.length === 0) return alert("Chưa chọn file nào!");
+        if (!confirm(`Bạn có chắc muốn xóa ${selected.length} file?`)) return;
+
+        await fetch(`${API_URL}/notes/${id}/delete-files`, {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer " + token,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ files: selected })
+        });
+
+        alert("Đã xóa file!");
+        viewDetail(id); // reload lại modal
+      };
+    }
+
+    // Hiện modal
+    document.getElementById("detailModal").style.display = "flex";
+  } catch (err) {
+    console.error("Error in viewDetail:", err);
+    alert("Đã xảy ra lỗi, xem console để debug");
+  }
+}
+
+
+function closeModal() {
+  document.getElementById("detailModal").style.display = "none";
+}
+
+function closeImageOverlay() {
+  document.getElementById("imageOverlay").style.display = "none";
+}
+
+// Click ngoài modal để đóng
+window.onclick = (event) => {
+  const modal = document.getElementById("detailModal");
+  if (event.target === modal) closeModal();
+};
+
+document.getElementById("logoutBtn").onclick=()=>{
+  localStorage.removeItem("token"); 
+  window.location="login.html"; 
+}
+
+// Tìm kiếm
+async function searchNotes(){
+  const keyword=document.getElementById("search").value.trim();
+  const notes=await getNotes();
+  renderNotes(notes.filter(n=>n.title.includes(keyword)||n.content.includes(keyword)));
+}
+
+// ==== Ghi âm ====
+let mediaRecorder;
+let audioChunks = [];
+
+const startBtn = document.getElementById("startRecordBtn");
+const stopBtn = document.getElementById("stopRecordBtn");
+const voicePreview = document.getElementById("voicePreview");
+
+startBtn.onclick = async () => {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  mediaRecorder = new MediaRecorder(stream);
+  audioChunks = [];
+
+  mediaRecorder.ondataavailable = e => {
+    if (e.data.size > 0) audioChunks.push(e.data);
+  };
+
+  mediaRecorder.onstop = () => {
+    const audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
+    const audioUrl = URL.createObjectURL(audioBlob);
+    voicePreview.src = audioUrl;
+    voicePreview.style.display = "block";
+
+    // Add file vào input
+    const file = new File([audioBlob], `voice_${Date.now()}.mp3`, { type: 'audio/mpeg' });
+    const fileInput = document.getElementById("fileUpload");
+    const dt = new DataTransfer();
+    Array.from(fileInput.files).forEach(f => dt.items.add(f));
+    dt.items.add(file);
+    fileInput.files = dt.files;
+  };
+
+  mediaRecorder.start();
+  startBtn.disabled = true;
+  stopBtn.disabled = false;
+};
+
+stopBtn.onclick = () => {
+  if (mediaRecorder) mediaRecorder.stop();
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+};
+
+// Toggle vùng vẽ
+document.getElementById("toggleDrawBtn").onclick = () => {
+  const drawArea = document.getElementById("drawAreaWrapper");
+  drawArea.style.display = drawArea.style.display === "none" ? "block" : "none";
+};
+
+// Vẽ
+const canvas = document.getElementById("drawCanvas");
+const ctx = canvas.getContext("2d");
+let drawing = false;
+
+canvas.onmousedown = (e) => {
+  drawing = true;
+  ctx.beginPath();
+  ctx.moveTo(e.offsetX, e.offsetY);
+};
+canvas.onmousemove = (e) => {
+  if (!drawing) return;
+  ctx.lineTo(e.offsetX, e.offsetY);
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+};
+canvas.onmouseup = () => drawing = false;
+canvas.onmouseleave = () => drawing = false;
+
+document.getElementById("clearDrawBtn").onclick = () => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+};
+
+// Trong hàm thêm/sửa note:
+async function saveNote() {
+  // ... các dữ liệu khác ...
+  const formData = new FormData();
+
+  // Nếu có vẽ gì trong canvas → thêm file
+  const blank = document.createElement("canvas");
+  blank.width = canvas.width;
+  blank.height = canvas.height;
+  const isEmpty = ctx.getImageData(0, 0, canvas.width, canvas.height)
+                   .data.every(ch => ch === 0);
+
+  if (!isEmpty) {
+    await new Promise(resolve => {
+      canvas.toBlob((blob) => {
+        const file = new File([blob], `drawing_${Date.now()}.png`, { type: "image/png" });
+        formData.append("files", file);
+        resolve();
+      });
+    });
+  }
+
+}
+
+// ==========================
+// Lưu 5 email gần đây
+let recentEmails = JSON.parse(localStorage.getItem("recentEmails") || "[]");
+
+function shareNoteUI(noteId) {
+  const popup = document.getElementById("sharePopup");
+  const overlay = document.getElementById("overlay");
+  const emailInput = document.getElementById("shareEmail");
+  const recentDiv = document.getElementById("recentEmails");
+  const sendBtn = document.getElementById("sendShareBtn");
+  const cancelBtn = document.getElementById("cancelShareBtn");
+
+  // Hiển thị popup
+  popup.style.display = "block";
+  overlay.style.display = "block";
+  emailInput.value = "";
+
+  // Hiển thị recent emails
+  recentDiv.innerHTML = "";
+  recentEmails.forEach(e => {
+    const span = document.createElement("span");
+    span.textContent = e;
+    span.className = "recent-email";
+    span.style.cursor = "pointer";
+    span.style.marginRight = "5px";
+    span.style.padding = "2px 4px";
+    span.style.background = "#eee";
+    span.style.borderRadius = "4px";
+    span.addEventListener("click", () => {
+      emailInput.value = e;
+    });
+    recentDiv.appendChild(span);
+  });
+
+  // Gửi
+  sendBtn.onclick = async () => {
+    const email = emailInput.value.trim();
+    if (!email) return alert("Nhập email người nhận!");
+
+    try {
+      const res = await fetch(`${API_URL}/shares/${noteId}/share`, {
+        method: "POST",
+        headers: { 
+          "Authorization": "Bearer " + token,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email })
+      });
+
+      const data = await res.json();
+      if (!res.ok) return alert("Không thể chia sẻ: " + data.message);
+
+      alert(" Đã gửi yêu cầu share!");
+      loadNotes();
+
+      // Lưu vào recent emails
+      recentEmails = [email, ...recentEmails.filter(x => x !== email)].slice(0,5);
+      localStorage.setItem("recentEmails", JSON.stringify(recentEmails));
+
+      popup.style.display = "none";
+      overlay.style.display = "none";
+    } catch (err) {
+      console.error("Lỗi share:", err);
+      alert("Lỗi server khi share");
+    }
+  };
+
+  // Hủy
+  cancelBtn.onclick = overlay.onclick = () => {
+    popup.style.display = "none";
+    overlay.style.display = "none";
+  };
+}
+
+
+
+
+const shareListDiv = document.getElementById("shareList");
+const btnViewShares = document.getElementById("btnViewShares");
+
+btnViewShares.addEventListener("click", async () => {
+  // Nếu đang hiển thị thì ẩn luôn
+  if (shareListDiv.style.display === "block") {
+    shareListDiv.style.display = "none";
+    return;
+  }
+
+  // Ngược lại, hiển thị danh sách
+  try {
+    const res = await fetch("/api/shares/", {
+      headers: { "Authorization": "Bearer " + localStorage.getItem("token") }
+    });
+    const shares = await res.json();
+
+    shareListDiv.innerHTML = "";
+
+    if (shares.length === 0) {
+      shareListDiv.innerHTML = "<p>Chưa có ghi chú nào được chia sẻ với bạn</p>";
+    } else {
+      shares.forEach(s => {
+        const div = document.createElement("div");
+        div.innerHTML = `
+          <p><strong>${s.title}</strong> từ ${s.fromEmail} | 
+          <button onclick="acceptShare(${s.id})">Chấp nhận</button> 
+          <button onclick="rejectShare(${s.id})">Từ chối</button></p>
+        `;
+        shareListDiv.appendChild(div);
+      });
+    }
+
+    shareListDiv.style.display = "block"; // hiển thị
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+// Chấp nhận share
+async function acceptShare(id) {
+  await fetch(`/api/shares/${id}/accept`, {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + localStorage.getItem("token") }
+  });
+  alert("Đã nhận ghi chú!");
+  btnViewShares.click(); // reload list và toggle
+  loadNotes();
+}
+
+// Từ chối share
+async function rejectShare(id) {
+  await fetch(`/api/shares/${id}/reject`, {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + localStorage.getItem("token") }
+  });
+  alert("Đã từ chối ghi chú!");
+  btnViewShares.click(); // reload list và toggle
+}
+
+loadNotes();
+</script>
+</body>
+</html>

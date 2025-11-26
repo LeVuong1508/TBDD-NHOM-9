@@ -1,0 +1,21 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF">
+
+    <com.example.noteapp.view.DrawingView
+        android:id="@+id/drawingView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <ImageButton
+        android:id="@+id/btnSaveDrawing"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_alignParentEnd="true"
+        android:layout_margin="16dp"
+        android:backgroundTint="@color/teal_700"
+        android:background="@drawable/bg_circle"
+        android:src="@drawable/ic_check"
+        android:contentDescription="Lưu bản vẽ" />
+</RelativeLayout>
